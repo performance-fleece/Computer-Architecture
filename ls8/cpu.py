@@ -25,11 +25,8 @@ class CPU:
         for instruction in lines:
             if len(instruction) > 1 and instruction.split()[0] != '#':
 
-                self.ram[address] = instruction.split()[0]
-                #     if instruction is not None:
+                self.ram[address] = int('0b' + instruction.split()[0], 2)
 
-                #         # self.ram[address] = instruction.split()[0]
-                #         # print(f"{address} : {(instruction.split())}")
                 address += 1
 
     def alu(self, op, reg_a, reg_b):
@@ -75,7 +72,6 @@ class CPU:
         HALT = 0b00000001
         running = True
         while running:
-
             IR = self.ram_read(self.pc)
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
