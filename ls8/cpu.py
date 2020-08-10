@@ -69,7 +69,9 @@ class CPU:
         """Run the CPU."""
         LDI = 0b10000010
         PRN = 0b01000111
-        HALT = 0b00000001
+        HLT = 0b00000001
+        MULT = 0b10100010
+
         running = True
         while running:
             IR = self.ram_read(self.pc)
@@ -80,15 +82,20 @@ class CPU:
                 # write following 2 commands, register, value
                 register = operand_a
                 value = operand_b
-                self.ram_write(register, value)
+                self.reg[register] = value
 
                 self.pc += 3
-                print(f"{value} written to register {register}")
 
             if IR == PRN:
-                number = self.ram_read(operand_a)
+                register = operand_a
+                number = self.reg[register]
                 print(number)
                 self.pc += 2
 
-            if IR == HALT:
+            if IR == MULT:
+                number = self.reg[operand_a] * self.reg[operand_b]
+                print(number)
+                self.pc += 3
+
+            if IR == HLT:
                 running = False
