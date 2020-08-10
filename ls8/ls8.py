@@ -5,7 +5,13 @@
 import sys
 from cpu import *
 
-cpu = CPU()
+if len(sys.argv) > 2:
+    print('too many arguments')
 
-cpu.load()
-cpu.run()
+if len(sys.argv) == 1:
+    print('please provide a file to load')
+
+if len(sys.argv) == 2:
+    cpu = CPU()
+    cpu.load()
+    cpu.run()
