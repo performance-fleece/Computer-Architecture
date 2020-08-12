@@ -87,8 +87,7 @@ class CPU:
         self.pc += 2
 
     def handle_mul(self, op_a, op_b):
-        multiplied = self.reg[op_a] * self.reg[op_b]
-        print(multiplied)
+        self.reg[op_a] *= self.reg[op_b]
         self.pc += 3
 
     def run(self):
