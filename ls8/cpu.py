@@ -5,7 +5,7 @@ import sys
 LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
-MLT = 0b10100010
+MUL = 0b10100010
 
 
 class CPU:
@@ -21,24 +21,22 @@ class CPU:
         self.branchtable[LDI] = self.handle_ldi
         self.branchtable[PRN] = self.handle_prn
         self.branchtable[HLT] = self.handle_hlt
-        self.branchtable[MLT] = self.handle_mlt
+        self.branchtable[MUL] = self.handle_mul
 
     def load(self):
         """Load a program into memory."""
-        program = open(sys.argv[1], "r")
-        lines = program.readlines()
-        print(lines)
 
         address = 0
+        try:
+            with open(sys.argv[1]) as file:
+                for line in file:
+                    if len(line) > 1 and line.split()[0] != '#':
 
-        # For now, we've just hardcoded a program:
+                        self.ram[address] = int('0b' + line.split()[0], 2)
 
-        for instruction in lines:
-            if len(instruction) > 1 and instruction.split()[0] != '#':
-
-                self.ram[address] = int('0b' + instruction.split()[0], 2)
-
-                address += 1
+                        address += 1
+        except FileNotFoundError:
+            print(f'{sys.argv[0]}: {sys.argv[1]} not found')
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -88,18 +86,13 @@ class CPU:
         print(num)
         self.pc += 2
 
-    def handle_mlt(self, op_a, op_b):
+    def handle_mul(self, op_a, op_b):
         multiplied = self.reg[op_a] * self.reg[op_b]
+        print(multiplied)
         self.pc += 3
 
     def run(self):
         """Run the CPU."""
-
-        # LDI = 0b10000010
-        # PRN = 0b01000111
-        # HLT = 0b00000001
-        # MLT = 0b10100010
-
         self.running = True
         while self.running:
             try:
