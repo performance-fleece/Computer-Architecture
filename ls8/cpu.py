@@ -6,6 +6,8 @@ LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 
 class CPU:
@@ -16,12 +18,15 @@ class CPU:
         self.pc = 0
         self.ram = [None] * 256
         self.reg = [None] * 8
+        self.reg[7] = 0xF4
         self.running = False
         self.branchtable = {}
         self.branchtable[LDI] = self.handle_ldi
         self.branchtable[PRN] = self.handle_prn
         self.branchtable[HLT] = self.handle_hlt
         self.branchtable[MUL] = self.handle_mul
+        self.branchtable[PUSH] = self.handle_push
+        self.branchtable[POP] = self.handle_pop
 
     def load(self):
         """Load a program into memory."""
@@ -43,6 +48,8 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         # elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
@@ -74,21 +81,37 @@ class CPU:
     def ram_write(self, mar, mdr):
         self.ram[mar] = mdr
 
-    def handle_ldi(self, register, value):
-        self.reg[register] = value
-        self.pc += 3
+    def handle_ldi(self, pc):
+        reg_idx = self.ram_read(pc + 1)
+        value = self.ram_read(pc + 2)
+        self.reg[reg_idx] = value
 
-    def handle_hlt(self, op_a, op_b):
+    def handle_hlt(self, pc):
         self.running = False
 
-    def handle_prn(self, register, op_b):
-        num = self.reg[register]
+    def handle_prn(self, pc):
+        reg_idx = self.ram_read(pc+1)
+        num = self.reg[reg_idx]
         print(num)
-        self.pc += 2
 
-    def handle_mul(self, op_a, op_b):
-        self.reg[op_a] *= self.reg[op_b]
-        self.pc += 3
+    def handle_mul(self, pc):
+        idx_a = self.ram_read(self.pc + 1)
+        idx_b = self.ram_read(self.pc + 2)
+        self.alu("MUL", idx_a, idx_b)
+
+    def handle_push(self, pc):
+        reg_to_push = self.ram_read(pc + 1)
+        value = self.reg[reg_to_push]
+        self.reg[7] -= 1
+        self.ram_write(self.reg[7], value)
+
+    def handle_pop(self, pc):
+        reg_to_write = self.ram_read(pc + 1)
+        idx_to_pop = self.reg[7]
+        value = self.ram_read(idx_to_pop)
+        self.reg[reg_to_write] = value
+
+        self.reg[7] += 1
 
     def run(self):
         """Run the CPU."""
@@ -96,38 +119,8 @@ class CPU:
         while self.running:
             try:
                 IR = self.ram_read(self.pc)
-                operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
 
-                self.branchtable[IR](operand_a, operand_b)
+                self.branchtable[IR](self.pc)
+                self.pc += 1 + (IR >> 6)
             except:
                 print('unknown error')
-
-        # while running:
-        #     IR = self.ram_read(self.pc)
-        #     operand_a = self.ram_read(self.pc + 1)
-        #     operand_b = self.ram_read(self.pc + 2)
-
-        #     try:
-
-        #         if IR == LDI:
-        #             # write following 2 commands, register, value
-        #             register = operand_a
-        #             value = operand_b
-        #             self.branchtable[IR](register, value)
-
-        #             self.pc += 3
-
-        #         if IR == PRN:
-        #             register = operand_a
-        #             number = self.reg[register]
-        #             print(number)
-        #             self.pc += 2
-
-        #         if IR == MULT:
-        #             number = self.reg[operand_a] * self.reg[operand_b]
-        #             print(number)
-        #             self.pc += 3
-
-        #         if IR == HLT:
-        #             running = False
