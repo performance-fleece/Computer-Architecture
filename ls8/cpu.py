@@ -8,6 +8,7 @@ HLT = 0b00000001
 MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+ADD = 0b10100000
 
 
 class CPU:
@@ -45,7 +46,7 @@ class CPU:
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
-        if op == "ADD":
+        if op == ADD:
             self.reg[reg_a] += self.reg[reg_b]
         elif op == MUL:
             self.reg[reg_a] *= self.reg[reg_b]
@@ -80,36 +81,46 @@ class CPU:
     def ram_write(self, mar, mdr):
         self.ram[mar] = mdr
 
-    def handle_ldi(self, pc):
-        reg_idx = self.ram_read(pc + 1)
-        value = self.ram_read(pc + 2)
+    def handle_ldi(self, reg_idx, value):
+        # reg_idx = self.ram_read(pc + 1)
+        # value = self.ram_read(pc + 2)
+
         self.reg[reg_idx] = value
 
-    def handle_hlt(self, pc):
+    def handle_hlt(self, _, __):
         self.running = False
 
-    def handle_prn(self, pc):
-        reg_idx = self.ram_read(pc+1)
+    def handle_prn(self, reg_idx, __):
+        # reg_idx = self.ram_read(pc+1)
         num = self.reg[reg_idx]
         print(num)
 
-    def handle_mul(self, pc):
-        idx_a = self.ram_read(self.pc + 1)
-        idx_b = self.ram_read(self.pc + 2)
-        self.alu("MUL", idx_a, idx_b)
-
-    def handle_push(self, pc):
-        reg_to_push = self.ram_read(pc + 1)
-        value = self.reg[reg_to_push]
+    def handle_push(self, reg_to_push, __):
+        # reg_to_push = self.ram_read(pc + 1)
         self.reg[7] -= 1
+
+        value = self.reg[reg_to_push]
         self.ram_write(self.reg[7], value)
 
-    def handle_pop(self, pc):
-        reg_to_write = self.ram_read(pc + 1)
-        idx_to_pop = self.reg[7]
-        value = self.ram_read(idx_to_pop)
+    def handle_pop(self, reg_to_write, __):
+        # reg_to_write = self.ram_read(pc + 1)
+        sp = self.reg[7]
+        value = self.ram_read(sp)
         self.reg[reg_to_write] = value
 
+        self.reg[7] += 1
+
+    def handle_call(self, destination_address, return_address):
+        # return_address = self.pc + 2
+        self.reg[7] -= 1
+        sp = self.reg[7]
+        self.ram_write(sp, return_address)
+        self.pc = destination_address
+
+    def handle_ret(self, _, __):
+        sp = self.reg[7]
+        value = self.ram_read(sp)
+        self.pc = value
         self.reg[7] += 1
 
     def run(self):
@@ -117,18 +128,21 @@ class CPU:
         self.running = True
         while self.running:
             try:
+                self.trace()
                 IR = self.ram_read(self.pc)
+                op_a = self.ram_read(self.pc + 1)
+                op_b = self.ram_read(self.pc + 2)
+                sets_pc_directly = (IR >> 4) & 0b0001
+                if not sets_pc_directly:
+                    self.pc += 1 + (IR >> 6)
 
                 is_alu_command = ((IR >> 5) & 0b001) == 1
                 if is_alu_command:
-                    op_a = self.ram_read(self.pc + 1)
-                    op_b = self.ram_read(self.pc + 2)
 
                     self.alu(IR, op_a, op_b)
 
                 else:
-                    self.branchtable[IR](self.pc)
+                    self.branchtable[IR](op_a, op_b)
 
-                self.pc += 1 + (IR >> 6)
             except:
                 print('unknown error')
