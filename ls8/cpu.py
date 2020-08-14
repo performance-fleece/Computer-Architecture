@@ -24,7 +24,6 @@ class CPU:
         self.branchtable[LDI] = self.handle_ldi
         self.branchtable[PRN] = self.handle_prn
         self.branchtable[HLT] = self.handle_hlt
-        self.branchtable[MUL] = self.handle_mul
         self.branchtable[PUSH] = self.handle_push
         self.branchtable[POP] = self.handle_pop
 
@@ -48,7 +47,7 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        elif op == "MUL":
+        elif op == MUL:
             self.reg[reg_a] *= self.reg[reg_b]
         # elif op == "SUB": etc
         else:
@@ -120,7 +119,16 @@ class CPU:
             try:
                 IR = self.ram_read(self.pc)
 
-                self.branchtable[IR](self.pc)
+                is_alu_command = ((IR >> 5) & 0b001) == 1
+                if is_alu_command:
+                    op_a = self.ram_read(self.pc + 1)
+                    op_b = self.ram_read(self.pc + 2)
+
+                    self.alu(IR, op_a, op_b)
+
+                else:
+                    self.branchtable[IR](self.pc)
+
                 self.pc += 1 + (IR >> 6)
             except:
                 print('unknown error')
