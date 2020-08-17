@@ -9,6 +9,8 @@ MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
 ADD = 0b10100000
+CALL = 0b01010000
+RET = 0b00010001
 
 
 class CPU:
@@ -27,6 +29,8 @@ class CPU:
         self.branchtable[HLT] = self.handle_hlt
         self.branchtable[PUSH] = self.handle_push
         self.branchtable[POP] = self.handle_pop
+        self.branchtable[CALL] = self.handle_call
+        self.branchtable[RET] = self.handle_ret
 
     def load(self):
         """Load a program into memory."""
@@ -84,7 +88,6 @@ class CPU:
     def handle_ldi(self, reg_idx, value):
         # reg_idx = self.ram_read(pc + 1)
         # value = self.ram_read(pc + 2)
-
         self.reg[reg_idx] = value
 
     def handle_hlt(self, _, __):
@@ -110,17 +113,17 @@ class CPU:
 
         self.reg[7] += 1
 
-    def handle_call(self, destination_address, return_address):
-        # return_address = self.pc + 2
+    def handle_call(self, reg_idx, _):
+        return_address = self.pc + 2
+
         self.reg[7] -= 1
-        sp = self.reg[7]
-        self.ram_write(sp, return_address)
-        self.pc = destination_address
+        self.ram_write(self.reg[7], return_address)
+        self.pc = self.reg[reg_idx]
 
     def handle_ret(self, _, __):
-        sp = self.reg[7]
-        value = self.ram_read(sp)
-        self.pc = value
+        ret_idx = self.ram_read(self.reg[7])
+        self.pc = ret_idx
+
         self.reg[7] += 1
 
     def run(self):
@@ -128,21 +131,23 @@ class CPU:
         self.running = True
         while self.running:
             try:
-                self.trace()
+
                 IR = self.ram_read(self.pc)
                 op_a = self.ram_read(self.pc + 1)
                 op_b = self.ram_read(self.pc + 2)
-                sets_pc_directly = (IR >> 4) & 0b0001
-                if not sets_pc_directly:
-                    self.pc += 1 + (IR >> 6)
 
+                sets_pc_directly = (IR >> 4) & 0b0001
                 is_alu_command = ((IR >> 5) & 0b001) == 1
+
                 if is_alu_command:
 
                     self.alu(IR, op_a, op_b)
 
                 else:
                     self.branchtable[IR](op_a, op_b)
+
+                if not sets_pc_directly:
+                    self.pc += 1 + (IR >> 6)
 
             except:
                 print('unknown error')
